@@ -74,7 +74,7 @@ async def get_conference(
     	 conference(id: $slug) {
     		id
     		title
-    		events:lectures{nodes{guid,slug,video:videoPreferred{filename}}}
+    		events:lectures{nodes{guid,slug,title,date,video:videoPreferred{filename}}}
     	}
     }""",
         slug=conference,

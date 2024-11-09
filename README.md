@@ -2,6 +2,7 @@
 
 To run install poetry and execute:
 
+    cp publishing_gw/config.py{.template,}
     $ poetry run publishing-gw
 
 ## Example usage
