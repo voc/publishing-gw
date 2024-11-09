@@ -1,6 +1,8 @@
 import os
 import json
 import jwt
+import uvicorn
+import asyncio
 
 from fastapi import (
     Depends,
@@ -12,17 +14,26 @@ from fastapi import (
     Form,
     Header,
 )
+from fastapi.responses import JSONResponse, RedirectResponse
 from typing import Optional
-from fastapi.responses import RedirectResponse
+from pydantic import BaseModel
 
-from publishing_gw import voctoweb
+from publishing_gw import cdn, voctoweb
 
-# import config
+from publishing_gw.config import config
 
 app = FastAPI(
     title="c3voc Publishing Gateway",
-    description="simplify publishing of ancillary content like slides, subtitles, and other addional metadata to the c3voc infrastructure",
+    description="simplify publishing of auxiliary content like slides, subtitles, and other addional metadata to the c3voc infrastructure",
+    version="0.2.0",
 )
+
+
+def Error(message=None, status_code=400, detail=None):
+    return JSONResponse(
+        status_code=status_code,
+        content={"errors": [{"message": message or detail or "unknown error"}]},
+    )
 
 
 async def token_required(authorization: Optional[str] = Header(None)):
@@ -33,16 +44,15 @@ async def token_required(authorization: Optional[str] = Header(None)):
         token = jwt.decode(authorization.split(" ")[1], verify=True)
         return token
 
-
     if authorization and authorization.startswith("Token "):
         api_key = authorization.split(" ")[1]
     if authorization and authorization.startswith("token="):
         api_key = authorization.split("=")[1]
 
     if not api_key:
-        raise HTTPException(status_code=400, detail="Please provide an API key")
+        raise Error(status_code=400, detail="Please provide an API key")
     if api_key not in config.allowed_keys:
-        raise HTTPException(status_code=403, detail="The provided API key is not valid")
+        raise Error(status_code=403, detail="The provided API key is not valid")
     return api_key
 
 
@@ -57,23 +67,32 @@ async def root():
 )
 async def get_conference(
     conference: str = Path(example="37c3"),
-):  # Header(default="37c3")):
-    return voctoweb.graphql(
+):
+    result = voctoweb.graphql(
         """query Conference($slug: ID!){
     	 conference(id: $slug) {
     		id
     		title
+    		events:lectures{nodes{guid,slug,video:videoPreferred{filename}}}
     	}
     }""",
         slug=conference,
     )["conference"]
+
+    if result == None:
+        return Error(status_code=404, detail="Conference not found")
+
+    return result
 
 
 @app.get(
     "/api/{conference}/events/{guid}",
     summary="Get event/lecture/item metadata needed for publishing from voctoweb/schedule etc.",
 )
-async def get_event(conference: str, guid: str, token: str = Depends(token_required)):
+async def get_event(
+    conference: str = Path(example="37c3"),
+    guid: str = Path(example="b64fa58b-6f1c-45ef-8dd1-c09947f8a455"),
+):
     return voctoweb.get(f"/public/events/{guid}")
 
 
@@ -86,7 +105,8 @@ async def upsert_event(
 ):
 
     # ... (Adapt the request logic for FastAPI)
-    pass
+
+    return Error(status_code=501, detail="Not implemented yet")
 
 
 @app.patch(
@@ -94,9 +114,9 @@ async def upsert_event(
     summary="Update event metadata, compatible with existing voctoweb private API",
 )
 async def patch_event(conference: str, guid: str, token: str = Depends(token_required)):
-
+    #
     # ... (Adapt the request logic for FastAPI)
-    pass
+    return Error(status_code=501, detail="Not implemented yet")
 
 
 @app.post(
@@ -106,54 +126,63 @@ async def patch_event(conference: str, guid: str, token: str = Depends(token_req
 )
 async def recordings(payload: dict = Form(...), token: str = Depends(token_required)):
     # ... (Adapt the rest of the recordings function for FastAPI)
-    pass
+    return Error(status_code=501, detail="Not implemented yet")
 
 
 @app.put(
     "/api/{conference}/events/{guid}/file",
-    summary="Add or update a file to an event e.g. lecture slides, subtitles etc.",
+    summary="Add (or update) a file to an event e.g. lecture slides, subtitles etc.",
 )
 async def create_or_update_file(
-    conference: str = Path(example="37c3"),
-    guid: str = Path(example="b64fa58b-6f1c-45ef-8dd1-c09947f8a455"),
-    file: UploadFile = File(...),
-    json_data: str = Form(...),
+    conference: str = Path(examples=["37c3"]),
+    guid: str = Path(examples=["b64fa58b-6f1c-45ef-8dd1-c09947f8a455"]),
+    file: UploadFile = File(examples=["b64fa58b-6f1c-45ef-8dd1-c09947f8a455.deu.vtt"]),
+    item: str = VoctowebRecording,
     token: str = Depends(token_required),
 ):
-    try:
-        data = json.loads(json_data)
-    except json.JSONDecodeError:
-        raise HTTPException(status_code=400, detail="Invalid JSON data")
+    if not file.filename.endswith(".vtt"):
+        raise HTTPException(
+            status_code=400, detail="At the moment, only VTT files are supported"
+        )
 
-    # File handling
-    # ... (Adapt file handling logic for FastAPI)
+    # upload file to cdn.media.ccc.de
+    cdn.process_and_upload_vtt(
+        file.file,
+        f"/srv/recordings/{conference}/{item.guid}-{item.language}.vtt",
+    )
+
+    # add (or update) file to voctoweb
+    r = voctoweb.upsert_recording(
+        guid,
+        {
+            "folder": "",
+            **item.raw,
+            "filename": item.name,
+            "mime_type": "text/vtt",
+            "language": item.language,
+            "state": "auto",
+        },
+    )
 
     return {"message": "File and data processed"}
 
 
-async def dev():
-    import uvicorn
+def dev():
+    run(reload=True, log_level="debug")
 
-    config = uvicorn.Config(
-        "publishing_gw.server:run",
-        port=int(os.environ.get("PORT", 5005)),
-        reload=True,
-        log_level="info",
-    )
-    server = uvicorn.Server(config)
-    await server.run()
-
-
-async def run():
-    import uvicorn
-
+def run(reload=False, log_level="info"):
+    port = int(os.environ.get("PORT", 5005))
     config = uvicorn.Config(
         app,
-        port=int(os.environ.get("PORT", 5005)),
-        log_level="info",
+        host="::",
+        port=port,
+        log_level=log_level,
+        reload=reload,
     )
     server = uvicorn.Server(config)
-    await server.run()
+    # TODO
+    # setup_logging()
+    server.run()
 
 
 if __name__ == "__main__":

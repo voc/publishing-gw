@@ -36,9 +36,12 @@ def graphql(query: str, **variables: dict):
 
     body = response.json()
     if 'errors' in body:
+        # TODO use logging.error etc.
+        print(f"  {url}")
+        print(f"  {response.status_code}")
         print(f"  {body['errors']}")
 
-    return body["data"]
+    return body.get('data', None)
 
 def get(uri):
     response = requests.get(urljoin(VOCTOWEB_URL, uri))

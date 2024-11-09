@@ -1,31 +1,38 @@
 [tool.poetry]
 name = "publishing-gw"
-version = "0.1.0"
+version = "0.2.0"
 description = ""
 authors = ["Andi <andi@saerdnaer.de>"]
 license = "MIT"
 readme = "README.md"
+repository = "https://github.com/voc/publishing-gw/"
 packages = [{include = "publishing_gw"}]
 
 [tool.poetry.scripts]
-server = "publishing_gw.server:run"
-dev    = "publishing_gw.server:dev"
-
-
-[tool.ruff]
-line-length = 100
-target-version = "py311"
-preview = true
+publishing_gw = "publishing_gw.server:run"
+dev           = "publishing_gw.server:dev"
 
 [tool.poetry.dependencies]
-python = "^3.10"
+python = "^3.12"
 fastapi = "^0.110.0"
-uvicorn = {extras = ["standard"], version = "^0.27.1"}
+uvicorn = { extras = ["standard"], version = "^0.31" }
+prometheus-fastapi-instrumentator = "^7.0"
 paramiko = "^3.4.0"
 requests = "^2.31.0"
 python-multipart = "^0.0.9"
 jwt = "^1.3.1"
+pydantic = "^2.9.2"
+pydantic-core = "^2.23.0"
 
+[tool.poetry.dev-dependencies]
+ruff = "0.6.1"
+pyright = "^1.1.350"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+preview = true
+ignore = ["COM812"]
 
 [build-system]
 requires = ["poetry-core"]

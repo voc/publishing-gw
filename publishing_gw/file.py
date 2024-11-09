@@ -1,21 +1,21 @@
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import Optional, Any
 
 
 @dataclass
-class File:
+class FileEntry:
     name: str  # e.g. 'camp2023-57136-eng-Lightning_Talks_Session_1_opus.vtt'
     path: str
     size: int
     conference: Optional[str]
     event_local_id: Optional[str]
     language: Optional[str]
-    raw: Optional[any]
+    raw: Optional[Any]
 
     @staticmethod
     def from_dict(d):
         parts = d["name"].split("-")
-        return File(
+        return FileEntry(
             name=d["name"],
             path=d["path"],
             size=d["size"],
@@ -35,6 +35,8 @@ class File:
             self.conference = parts[0]
             self.event_local_id = parts[1]
             self.language = parts[2]
+
+        # TODO: validate language code
 
     def key(self):
         return f"{self.conference}-{self.event_local_id}"

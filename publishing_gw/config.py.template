@@ -1,0 +1,6 @@
+
+
+class config:
+    allowed_keys = [
+       'token=34170cc4-0a3d-11e6-823b-6c400891b752'
+    ]
