@@ -52,19 +52,18 @@ class Conference(BaseModel):
 
 
 class Recording(BaseModel):
-    size: int
-    length: int
+    filename: str
     mime_type: str
     language: str
-    filename: str
-    state: str
-    folder: str
+    folder: str | None
+    size: int | None
+    length: int | None
+    state: str | None
     high_quality: bool
-    width: int
-    height: int
+    width: int | None
+    height: int | None
     updated_at: str
     recording_url: str
-    url: str
 
 
 class DetailedEvent(BaseEvent):
