@@ -1,6 +1,7 @@
 import re
 import time
 import json
+from typing import Any
 import requests
 from os import environ
 from urllib.parse import urljoin
@@ -43,7 +44,7 @@ def graphql(query: str, **variables: dict):
 
     return body.get('data', None)
 
-def get(uri):
+def get(uri) -> Any:
     response = requests.get(urljoin(VOCTOWEB_URL, uri))
     if response.status_code != 200:
         print(f"  {response.status_code}\n" + response.text.split("\n")[0])

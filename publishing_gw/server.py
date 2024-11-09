@@ -17,11 +17,12 @@ from fastapi import (
 )
 from fastapi.responses import JSONResponse, RedirectResponse
 from typing import Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, TypeAdapter
 
 from publishing_gw import cdn, voctoweb
 
 from publishing_gw.config import config
+from publishing_gw.model import Conference, DetailedEvent
 
 app = FastAPI(
     title="c3voc Publishing Gateway",
@@ -51,9 +52,9 @@ async def token_required(authorization: Optional[str] = Header(None)):
         api_key = authorization.split("=")[1]
 
     if not api_key:
-        raise Error(status_code=400, detail="Please provide an API key")
+        raise HTTPException(status_code=400, detail="Please provide an API key")
     if api_key not in config.allowed_keys:
-        raise Error(status_code=403, detail="The provided API key is not valid")
+        raise HTTPException(status_code=403, detail="The provided API key is not valid")
     return api_key
 
 
@@ -68,7 +69,7 @@ async def root():
 )
 async def get_conference(
     conference: str = Path(example="37c3"),
-):
+) -> Conference:
     result = voctoweb.graphql(
         """query Conference($slug: ID!){
     	 conference(id: $slug) {
@@ -80,10 +81,12 @@ async def get_conference(
         slug=conference,
     )["conference"]
 
-    if result == None:
-        return Error(status_code=404, detail="Conference not found")
+    if result is None:
+        raise HTTPException(status_code=404, detail="Conference not found")
 
-    return result
+    result["events"] = result.get("events", {}).get("nodes", [])
+
+    return Conference.model_validate(result)
 
 
 @app.get(
@@ -93,8 +96,9 @@ async def get_conference(
 async def get_event(
     conference: str = Path(example="37c3"),
     guid: str = Path(example="b64fa58b-6f1c-45ef-8dd1-c09947f8a455"),
-):
-    return voctoweb.get(f"/public/events/{guid}")
+) -> DetailedEvent:
+    res = voctoweb.get(f"/public/events/{guid}")
+    return TypeAdapter(DetailedEvent).validate_python(res)
 
 
 @app.post(
