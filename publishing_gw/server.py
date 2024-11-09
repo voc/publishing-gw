@@ -1,10 +1,11 @@
 import os
-import json
+from fastapi.encoders import jsonable_encoder
 import jwt
+import pydantic
 import uvicorn
-import asyncio
 
 from fastapi import (
+    Body,
     Depends,
     FastAPI,
     HTTPException,
@@ -129,6 +130,19 @@ async def recordings(payload: dict = Form(...), token: str = Depends(token_requi
     return Error(status_code=501, detail="Not implemented yet")
 
 
+class FileMeta(BaseModel):
+    language: str
+    mime_type: str
+
+
+class FileUpsertBody(BaseModel):
+    recording: FileMeta
+    # other: any
+
+    class Config:
+        arbitrary_types_allowed = True
+
+
 @app.put(
     "/api/{conference}/events/{guid}/file",
     summary="Add (or update) a file to an event e.g. lecture slides, subtitles etc.",
@@ -136,8 +150,8 @@ async def recordings(payload: dict = Form(...), token: str = Depends(token_requi
 async def create_or_update_file(
     conference: str = Path(examples=["37c3"]),
     guid: str = Path(examples=["b64fa58b-6f1c-45ef-8dd1-c09947f8a455"]),
-    file: UploadFile = File(examples=["b64fa58b-6f1c-45ef-8dd1-c09947f8a455.deu.vtt"]),
-    item: str = VoctowebRecording,
+    file: UploadFile = File(),  # example="b64fa58b-6f1c-45ef-8dd1-c09947f8a455.deu.vtt"),
+    meta: str = Body(..., media_type="application/json"),
     token: str = Depends(token_required),
 ):
     if not file.filename.endswith(".vtt"):
@@ -145,10 +159,16 @@ async def create_or_update_file(
             status_code=400, detail="At the moment, only VTT files are supported"
         )
 
+    try:
+        model = FileUpsertBody.model_validate_json(json_data=meta)
+    except pydantic.ValidationError as e:
+        raise HTTPException(detail=jsonable_encoder(e.errors()), status_code=422) from e
+
     # upload file to cdn.media.ccc.de
+    filename = f"{guid}-{model.recording.language}.vtt"
     cdn.process_and_upload_vtt(
         file.file,
-        f"/srv/recordings/{conference}/{item.guid}-{item.language}.vtt",
+        f"/srv/recordings/{conference}/{filename}",
     )
 
     # add (or update) file to voctoweb
@@ -156,10 +176,10 @@ async def create_or_update_file(
         guid,
         {
             "folder": "",
-            **item.raw,
-            "filename": item.name,
+            **model.recording.model_dump(),
+            "filename": filename,
             "mime_type": "text/vtt",
-            "language": item.language,
+            "language": model.recording.language,
             "state": "auto",
         },
     )
@@ -169,6 +189,7 @@ async def create_or_update_file(
 
 def dev():
     run(reload=True, log_level="debug")
+
 
 def run(reload=False, log_level="info"):
     port = int(os.environ.get("PORT", 5005))

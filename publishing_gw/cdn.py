@@ -14,7 +14,7 @@ def connect_ssh():
     logging.getLogger("paramiko").setLevel(logging.ERROR)
     ssh.load_system_host_keys()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    host = env.get("SFTP_UPLOAD_HOST", "cdn.media.ccc.de")
+    host = env.get("SFTP_UPLOAD_HOST", "upload.media.ccc.de")
     try:
         ssh.connect(
             host,
