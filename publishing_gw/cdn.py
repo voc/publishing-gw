@@ -31,7 +31,31 @@ def connect_ssh():
     logging.info(f"SSH connection established to {host}")
 
 
-def process_and_upload_vtt(url, target):
+
+def upload_file(file, target):
+    # check if ssh connection is open
+    if ssh is None:
+        connect_ssh()
+
+    try:
+        print("  uploading {} to {}".format(file.filename, target))
+        try:
+            sftp.mkdir(path.dirname(target))
+        except:
+            pass
+        with sftp.open(target, "w", 32768) as fh:
+            while True:
+                chunk = file.file.read(32768)
+                if not chunk:
+                    break
+                fh.write(chunk)
+    except paramiko.SSHException as e:
+        raise Exception(f"could not upload WebVTT because of SSH problem {e}") from e
+    except IOError as e:
+        raise Exception(f"could not upload WebVTT because of {e}") from e
+
+
+def upload_from_url(url, target):
     # check if ssh connection is open
     if ssh is None:
         connect_ssh()

@@ -170,9 +170,9 @@ async def create_or_update_file(
 
     # upload file to cdn.media.ccc.de
     filename = f"{guid}-{model.recording.language}.vtt"
-    cdn.process_and_upload_vtt(
-        file.file,
-        f"/srv/recordings/{conference}/{filename}",
+    cdn.upload_file(
+        file,
+        f"/static.media.ccc.de/transcripts/{conference}/{filename}",
     )
 
     # add (or update) file to voctoweb

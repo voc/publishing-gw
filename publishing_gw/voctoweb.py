@@ -11,7 +11,7 @@ VOCTOWEB_URL = "https://media.ccc.de"
 # VOCTOWEB_URL = 'https://media.test.c3voc.de'
 VOCTOWEB_API_KEY = environ.get("VOCTOWEB_API_KEY", "")
 
-dry_run = True
+dry_run = False
 slow_down = False
 
 private_api = requests.Session()
