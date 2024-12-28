@@ -85,6 +85,7 @@ async def get_conference(
         raise HTTPException(status_code=404, detail="Conference not found")
 
     result["events"] = result.get("events", {}).get("nodes", [])
+    result["events"] = [event for event in result["events"] if event is not None] # api returns null in some cases at the moment
 
     return Conference.model_validate(result)
 
