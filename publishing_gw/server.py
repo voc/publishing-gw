@@ -212,7 +212,7 @@ def run(reload=False, log_level="info"):
     port = int(os.environ.get("PORT", 5005))
     config = uvicorn.Config(
         app,
-        host="::",
+        host="::1",
         port=port,
         log_level=log_level,
         reload=reload,

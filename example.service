@@ -1,0 +1,10 @@
+[Unit]
+Description=publishing gateway
+
+[Service]
+User=publishing-gw
+ExecStart=poetry run publishing_gw
+WorkingDirectory=/opt/publishing-gw
+
+[Install]
+WantedBy=multi-user.target
