@@ -51,21 +51,6 @@ def get(uri) -> Any:
         return False
     return response.json()
 
-def create_lecture_map(conference: str):
-    # https://media.ccc.de/graphql?query={conference(id:%22camp2023%22){title,lectures{nodes{guid,slug}}}}
-    query = '{conference(id:"' + conference + '"){title,lectures{nodes{guid,slug,video:videoPreferred{filename}}}}}'
-    # {"conference":{"title":"Chaos Communication Camp 2023","lectures":{"nodes":[{"guid":"c793b7ba-e1e4-5a77-95e6-08ce4b4cb8ab","slug":"camp2023-57293-on_track_demoparty"},…
-    lectures = graphql(query)["conference"]["lectures"]["nodes"]
-    lookup_map = {}
-    for talk in lectures:
-        key = key_from_slug(talk["slug"])
-        lookup_map[key] = talk
-        alt_key = key_from_slug(talk["video"]["filename"], cleanup=True)
-        if key != alt_key:
-            lookup_map[alt_key] = talk
-
-    return lookup_map
-
 
 def key_from_slug(slug: str, cleanup=False):
     try:
