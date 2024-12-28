@@ -7,7 +7,7 @@ from os import environ
 from urllib.parse import urljoin
 
 
-VOCTOWEB_URL = "https://media.ccc.de"
+VOCTOWEB_URL = "https://api.media.ccc.de"
 # VOCTOWEB_URL = 'https://media.test.c3voc.de'
 VOCTOWEB_API_KEY = environ.get("VOCTOWEB_API_KEY", "")
 
@@ -74,7 +74,7 @@ def upsert_recording(guid: str, data: dict):
             "recording": {"folder": "", **data},
         })
         if r.status_code not in [200, 201]:
-            print(f"  {r.status_code}\n" + r.text.split("\n")[0])
+            print(f"  voctoweb error {r.status_code}:\n" + r.text.split("\n")[0])
             if slow_down:
                 time.sleep(5)
             if r.status_code == 422:
