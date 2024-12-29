@@ -3,7 +3,7 @@ from fastapi.encoders import jsonable_encoder
 import jwt
 import pydantic
 import uvicorn
-from pathlib import Path
+import pathlib
 
 from fastapi import (
     Body,
@@ -175,12 +175,15 @@ async def create_or_update_file(
 
     # we need to get the confernce_path and the legacy_id from the event
     # "thumbnails_url": "https://static.media.ccc.de/media/congress/2024/66-59022846-b130-581e-a89f-ecf6e7e43940.thumbnails.vtt",
-    path_base = Path(event.get("thumbnails_url").replace('https://static.media.ccc.de/media/', '').replace('.thumbnails.vtt', ''))
+    path_base = pathlib.Path(
+        event.get("thumbnails_url")
+        .replace("https://static.media.ccc.de/media/", "")
+        .replace(".thumbnails.vtt", "")
+    )
     filename = f"{path_base.name}-{model.recording.language}.vtt"
-    #filename = f"{legacy_id}-{guid}-{model.recording.language}.vtt"
+    # filename = f"{legacy_id}-{guid}-{model.recording.language}.vtt"
 
     conference_path = path_base.parent
-
 
     # upload file to cdn.media.ccc.de
     cdn.upload_file(
