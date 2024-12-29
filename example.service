@@ -3,6 +3,7 @@ Description=publishing gateway
 
 [Service]
 User=publishing-gw
+EnvironmentFile=/opt/publishing-gw/.env
 ExecStart=poetry run publishing_gw
 WorkingDirectory=/opt/publishing-gw
 

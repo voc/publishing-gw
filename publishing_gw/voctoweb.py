@@ -11,6 +11,7 @@ VOCTOWEB_URL = "https://api.media.ccc.de"
 # VOCTOWEB_URL = 'https://media.test.c3voc.de'
 VOCTOWEB_API_KEY = environ.get("VOCTOWEB_API_KEY", "")
 
+debug = False
 dry_run = False
 slow_down = False
 
@@ -18,7 +19,7 @@ private_api = requests.Session()
 private_api.headers.update(
     {
         "Content-Type": "application/json",
-        "Authorization ": f"Token token={VOCTOWEB_API_KEY}",
+        "Authorization": f"Token token={VOCTOWEB_API_KEY}",
     }
 )
 
@@ -36,7 +37,7 @@ def graphql(query: str, **variables: dict):
         return False
 
     body = response.json()
-    if 'errors' in body:
+    if debug and 'errors' in body:
         # TODO use logging.error etc.
         print(f"  {url}")
         print(f"  {response.status_code}")
@@ -75,6 +76,8 @@ def upsert_recording(guid: str, data: dict):
         })
         if r.status_code not in [200, 201]:
             print(f"  voctoweb error {r.status_code}:\n" + r.text.split("\n")[0])
+            if debug:
+                print(r.text)
             if slow_down:
                 time.sleep(5)
             if r.status_code == 422:
